@@ -1,6 +1,5 @@
-import { generateText, RetryError } from 'ai';
+import { generateText } from 'ai';
 import { google } from "@ai-sdk/google"
-import { tr } from 'zod/v4/locales';
 import { getRandomInterviewCover } from '@/lib/utils';
 import { db } from '@/components/firebase/admin';
 
