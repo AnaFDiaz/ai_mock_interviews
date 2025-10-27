@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { vapi } from "@/lib/vapi.sdk";
 import { interviewer } from "@/constants";
+import { createFeedback } from "@/lib/actions/general.action";
 
 enum CallStatus {
   INACTIVE = "INACTIVE",
@@ -24,6 +25,7 @@ const Agent = ({
   userId,
   type,
   interviewId,
+  feedbackId,
   questions,
 }: AgentProps) => {
   const router = useRouter();
@@ -65,13 +67,16 @@ const Agent = ({
     };
   }, []);
 
-  const handleGenerateFeedback = async (messages: SavedMessage[]) => {
+  const handleGenerateFeedback = useCallback (
+     async (messages: SavedMessage[]) => {
     console.log("Generate feedback here.");
 
-    const { success, id } = {
-      success: true,
-      id: "feedback-id",
-    };
+    const { success, feedbackId: id } = await createFeedback({
+      interviewId: interviewId!,
+      userId: userId!,
+      transcript: messages,
+      feedbackId,
+    });
 
     if (success && id) {
       router.push(`/interview/${interviewId}/feedback`);
@@ -79,7 +84,9 @@ const Agent = ({
       console.log("Error saving feedback");
       router.push("/");
     }
-  };
+  }, 
+  [interviewId, userId, feedbackId, router]
+);
 
   useEffect(() => {
     if (callStatus === CallStatus.FINISHED) {
@@ -89,7 +96,7 @@ const Agent = ({
         handleGenerateFeedback(messages);
       }
     }
-  }, [messages, callStatus, type, userId]);
+  }, [messages, callStatus, type, userId, handleGenerateFeedback, router]);
 
   const handleCall = async () => {
     setCallStatus(CallStatus.CONNECTING);
@@ -112,12 +119,13 @@ const Agent = ({
 
       await vapi.start(interviewer, {
         variableValues: {
-          questions: formattedQuestions
-        }})
+          questions: formattedQuestions,
+        },
+      });
     }
   };
 
-  const handleDisconnect = async () => {
+  const handleDisconnect = () => {
     setCallStatus(CallStatus.FINISHED);
 
     vapi.stop();
